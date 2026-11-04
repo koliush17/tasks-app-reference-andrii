@@ -113,9 +113,28 @@ Tasks:
 3. A `.dockerignore` for each service.
 4. Run a container as a user that is not root.
 
+### Meeting 5: Docker Compose and publishing images
+
+A `compose.yaml` describes several services and starts them with one command. Each service name is a host name on the network Compose creates. A `build_images` job builds both images on every run, and a job can publish an image to a registry (`ghcr.io`) with the token the run has.
+
+In a Codespace, traffic between containers on a Compose network is dropped by default. Run `sudo iptables-legacy -P FORWARD ACCEPT` once; it applies to this Codespace only.
+
+If you missed this meeting: copy `compose.yaml` and `.github/workflows/ci.yml` from this repo into your own, each as a whole file (`ci.yml` also has the `build_images` and `publish_images` jobs). There is no setting to change. None of this is homework.
+
+Docs: [Compose file reference](https://docs.docker.com/reference/compose-file/), [Services: healthcheck and depends_on](https://docs.docker.com/reference/compose-file/services/), [docker compose up](https://docs.docker.com/reference/cli/docker/compose/up/), [Interpolation and the .env file](https://docs.docker.com/compose/how-tos/environment-variables/variable-interpolation/), [Working with the Container registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+Tasks:
+
+1. A `build_images` job in `.github/workflows/ci.yml`: a matrix over `tasks-api` and `title-normalizer`, `docker build` for each one from its folder. It only builds. Push to `main`.
+2. A `compose.yaml` in the repo root: both services, each built from its folder, the ports 5000 and 5001 published. `docker compose up --build` runs both.
+3. `tasks-api` reaches `title-normalizer` by its service name. `POST /tasks` with the title `  buy   MILK ` returns `"title":"Buy MILK"` and `"normalized":true`. A wrong result is silent: the task is created and `normalized` is `false`.
+4. A `publish_images` job in `ci.yml`: it runs only on a push, not on a pull request, after `build_images`. For both services it pushes the image to `ghcr.io/<owner>/<service>`, tagged with the commit. Push to `main` and find the package. The docs page Working with the Container registry shows how to log in, build and push an image.
+5. A healthcheck on `title-normalizer`, and `tasks-api` starts only when it is healthy. `docker compose ps` shows `healthy`.
+6. A `smoke_test` job in `ci.yml`: start both services with Compose, post a task, fail the job when `normalized` is not `true`, shut the services down.
+7. Move the two published ports and the `NORMALIZER_URL` value out of `compose.yaml` into a `.env` file. `docker compose config` shows the same result as before.
+
 ### Coming later (planned)
 
-- Docker Compose and containers that talk to each other: running both services together from one file, a `build_images` CI job that builds both images, publishing an image to a registry. Docs: [Docker Compose](https://docs.docker.com/compose/).
 - Quality and security: image scanning, Dependabot, lint gates. Docs: [Securing your software supply chain](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain).
 - Infrastructure as code with Terraform and the Docker provider (no cloud account). Docs: [kreuzwerker/docker provider](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs).
 - Monitoring: metrics from the app, Prometheus, Grafana. Docs: [Prometheus overview](https://prometheus.io/docs/introduction/overview/).

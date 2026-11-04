@@ -57,6 +57,39 @@ jobs:
           name: ${{matrix.service}}-api-docs
           path: services/${{matrix.service}}/apidocs
 
+  build_images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [tasks-api, title-normalizer] # ${{matrix.service}}
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker build -t ${{matrix.service}} services/${{matrix.service}}
+
+  publish_images:
+    needs: build_images
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        service: [tasks-api, title-normalizer] # ${{matrix.service}}
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" |
+            docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/${{matrix.service}}"
+          IMAGE="$IMAGE:${{ github.sha }}"
+          SOURCE="https://github.com/${{ github.repository }}"
+          docker build \
+            --label "org.opencontainers.image.source=$SOURCE" \
+            -t "$IMAGE" services/${{matrix.service}}
+          docker push "$IMAGE"
+
   deploy:
     needs: [run_tests, generate_api_docs]
     if: github.event.pull_request.merged == true
