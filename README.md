@@ -133,9 +133,26 @@ Tasks:
 6. A `smoke_test` job in `ci.yml`: start both services with Compose, post a task, fail the job when `normalized` is not `true`, shut the services down.
 7. Move the two published ports and the `NORMALIZER_URL` value out of `compose.yaml` into a `.env` file. `docker compose config` shows the same result as before.
 
+### Meeting 6: protecting main and scanning images
+
+A ruleset on `main` can require pull requests, approvals and named checks, and it can have a bypass list. A scan job checks an image against a database of known flaws and can fail the run; publishing can wait for it. An action can be pinned by commit.
+
+If you missed this meeting: copy `.github/workflows/ci.yml` from this repo into your own as a whole file, and `services/tasks-api/Dockerfile`, `services/tasks-api/.dockerignore`, `services/title-normalizer/Dockerfile` and `services/title-normalizer/.dockerignore` if you have none. The ruleset is a setting, not a file (Settings > Rules > Rulesets, a new branch ruleset): any name, Enforcement status Active, target the default branch, bypass list Repository admin with Always allow, require a pull request with 1 approval, require status checks `run_tests (tasks-api, 3.12)`, `run_tests (title-normalizer, 3.12)`, `build_images (tasks-api)` and `build_images (title-normalizer)`. After the first green scan add `scan_images (tasks-api)` and `scan_images (title-normalizer)`. To switch the ruleset off, set Enforcement status to Disabled. A ruleset needs a public repository on a free account. None of this is homework.
+
+Docs: [About rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets), [Troubleshooting required status checks](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks), [Trivy Action README](https://github.com/aquasecurity/trivy-action#readme), [Trivy: container image](https://trivy.dev/docs/latest/guide/target/container_image/), [Trivy: filtering](https://trivy.dev/docs/latest/guide/configuration/filtering/), [Working with the Container registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+
+Tasks:
+
+1. Read your `publish_images` job and find the package it pushed: the image name and the tag.
+2. A ruleset on `main` with the settings above. Open a pull request and read its merge box.
+3. A `scan_images` job after `build_images` (a matrix over both services, a Trivy scan of each image that fails on `CRITICAL` and `HIGH` findings that have a fix), with the Trivy action pinned by the commit SHA of a release you looked up. `publish_images` runs only after `scan_images`. Do it on a pull request, add the two `scan_images` checks to your ruleset, then merge.
+4. A job `checks_passed` that needs `run_tests`, `build_images` and `scan_images` and fails unless all three succeeded. Require that one name in your ruleset.
+5. Pin the other actions in `ci.yml` by the full commit SHA, with the version in a comment.
+6. Read your whole `ci.yml` and say aloud what each job does.
+
 ### Coming later (planned)
 
-- Quality and security: image scanning, Dependabot, lint gates. Docs: [Securing your software supply chain](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain).
+- Quality and security: Dependabot, lint gates. Docs: [Securing your software supply chain](https://docs.github.com/en/code-security/how-tos/secure-your-supply-chain).
 - Infrastructure as code with Terraform and the Docker provider (no cloud account). Docs: [kreuzwerker/docker provider](https://registry.terraform.io/providers/kreuzwerker/docker/latest/docs).
 - Monitoring: metrics from the app, Prometheus, Grafana. Docs: [Prometheus overview](https://prometheus.io/docs/introduction/overview/).
 
