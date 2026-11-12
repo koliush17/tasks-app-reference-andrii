@@ -1,6 +1,16 @@
 version: 2
 updates:
-  - package-ecosystem: "docker" 
-    directory: "services/tasks-api"           
+  - package-ecosystem: "github-actions" 
+    directory: "/"           
     schedule:
       interval: "weekly"       
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        pattern: ["*"]
+
+  - package-ecosystem: "pip"
+    directories: ["/services/tasks-api", "/services/title-normalizer"]
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 3
