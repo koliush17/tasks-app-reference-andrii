@@ -1,0 +1,6 @@
+version: 2
+updates:
+  - package-ecosystem: "docker" 
+    directory: "services/tasks-api"           
+    schedule:
+      interval: "weekly"       
